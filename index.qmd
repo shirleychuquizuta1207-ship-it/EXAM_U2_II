@@ -1,0 +1,90 @@
+---
+title: "Reanalisis_Exam_U2_II"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+# Análisis de diseño experimental
+
+## Base de datos
+
+>https://docs.google.com/spreadsheets/d/1Eppj_P-boCTBnYqwmLNce393REVXvuNMC8h9kaqQQx4/edit?gid=627855356#gid=627855356
+
+## Indentificar los factores 
+
+1. Factor 1: boro
+1. Factor 2: potasio
+
+## Identificar el modelo
+
+Factorial en DBCA
+
+$$Y = \mu + bloque + B + P + B*P + \xi$$
+
+# Project steup
+
+```{r}
+#| label: setup
+
+source('https://inkaverse.com/setup.r')
+```
+
+# Activar los paquetes
+
+```{r}
+gs <- "https://docs.google.com/spreadsheets/d/1Eppj_P-boCTBnYqwmLNce393REVXvuNMC8h9kaqQQx4/edit?gid=627855356#gid=627855356" %>%
+  as_sheets_id()
+
+fb <- gs %>%
+  range_read(ss = ., sheet = "fb",
+             col_types = "ccccddddd") %>%
+  mutate(across(c(1:4), ~ as.factor(.)))
+
+fb %>% str()
+summary(fb$peso_fruto)
+```
+
+# Análisis de variancia
+
+```{r}
+# aov() ó lm()
+
+fb_factorial <- fb %>%
+  filter(tratamiento != "T0") %>%
+  droplevels()
+
+md <- aov(peso_fruto ~ bloque + boro + potasio +
+            boro * potasio, fb_factorial)
+
+anova(md)
+```
+
+# Comparación de medias
+
+```{r}
+mc <- emmeans(md, ~ boro * potasio)
+
+# Letras de significancia
+tab <- cld(mc,
+           adjust = "tukey",
+           Letters = letters,
+           decreasing = TRUE)
+
+tab
+```
+
+# Representación gráfica
+
+```{r}
+pl <- plot_smr(data = tab
+               , x = "boro"
+               , y = "emmean"
+               , group = "potasio"
+               , error = "SE"
+               , sig = ".group"
+               , ylab = "Peso del fruto (kg)"
+               )
+
+pl
+```
